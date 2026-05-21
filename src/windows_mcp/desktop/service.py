@@ -762,7 +762,8 @@ class Desktop:
             if not uia.WindowFromPoint(x, y):
                 return False
             return uia.ControlFromPoint(x, y) is not None
-        except Exception:
+        except Exception as exc:
+            logger.debug(f"Selectable element check failed at ({x}, {y}): {exc}")
             return False
 
     def validate_selectable_coordinates(self, locs: list[tuple[int, int]]) -> None:
