@@ -998,16 +998,15 @@ class Desktop:
         return windows, window_handles
 
     def get_active_window_fast(self, windows: list[Window] | None = None) -> Window | None:
-        if windows is None:
-            windows, _ = self.get_windows_fast()
         handle = win32gui.GetForegroundWindow()
         if not handle or not win32gui.IsWindow(handle):
             return None
         if win32gui.GetClassName(handle) == "Progman":
             return None
-        for window in windows:
-            if window.handle == handle:
-                return window
+        if windows is not None:
+            for window in windows:
+                if window.handle == handle:
+                    return window
         return self._window_from_handle(handle, 0)
 
     def get_xpath_from_element(self, element: uia.Control):
