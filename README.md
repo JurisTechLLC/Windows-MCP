@@ -467,7 +467,7 @@ See [🔐 Security & Access Control](#-security--access-control) for all options
 |---|---|---|
 | `stdio` (default) | `--transport stdio` | Direct connection from MCP clients like Claude Desktop, Cursor, etc. |
 | `sse` | `--transport sse --host HOST --port PORT` | Network-accessible via Server-Sent Events |
-| `streamable-http` | `--transport streamable-http --host HOST --port PORT` | Network-accessible via HTTP streaming (recommended for production) |
+| `streamable-http` | `--transport streamable-http --host HOST --port PORT` | Network-accessible via HTTP streaming in stateless mode (retry-safe; recommended for production and tunnels/proxies) |
 
 ---
 
