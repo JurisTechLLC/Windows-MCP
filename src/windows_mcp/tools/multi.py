@@ -40,6 +40,7 @@ def register(mcp, *, get_desktop, get_analytics):
         press_ctrl = press_ctrl is True or (
             isinstance(press_ctrl, str) and press_ctrl.lower() == "true"
         )
+        desktop.validate_selectable_coordinates([(loc[0], loc[1]) for loc in locs])
         desktop.multi_select(press_ctrl, locs)
         elements_str = "\n".join([f"({loc[0]},{loc[1]})" for loc in locs])
         return f"Multi-selected elements at:\n{elements_str}"
@@ -87,6 +88,7 @@ def register(mcp, *, get_desktop, get_analytics):
             except Exception as e:
                 raise ValueError(f"Failed to process labels: {e}")
 
+        desktop.validate_selectable_coordinates([(loc[0], loc[1]) for loc in locs])
         desktop.multi_edit(locs)
         elements_str = ", ".join([f"({e[0]},{e[1]}) with text '{e[2]}'" for e in locs])
         return f"Multi-edited elements at: {elements_str}"

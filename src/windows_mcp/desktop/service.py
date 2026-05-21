@@ -757,6 +757,19 @@ class Desktop:
             x, y, text = loc
             self.type((x, y), text=text, clear=True)
 
+    def has_hit_testable_element(self, x: int, y: int) -> bool:
+        try:
+            if not uia.WindowFromPoint(x, y):
+                return False
+            return uia.ControlFromPoint(x, y) is not None
+        except Exception:
+            return False
+
+    def validate_selectable_coordinates(self, locs: list[tuple[int, int]]) -> None:
+        for x, y in locs:
+            if not self.has_hit_testable_element(x, y):
+                raise ValueError(f"error: no selectable element at ({x}, {y})")
+
     def scrape(self, url: str) -> str:
         validate_url(url)
         try:
