@@ -253,7 +253,6 @@ class TestDisplayFiltering:
     def test_get_state_skips_tree_capture_when_use_ui_tree_false(self, desktop):
         desktop.tree = MagicMock()
         desktop.tree.screen_box = make_box(0, 0, 1920, 1080)
-        desktop.get_controls_handles = MagicMock(return_value={1})
         active_window = Window(
             name="Browser",
             is_browser=True,
@@ -263,8 +262,8 @@ class TestDisplayFiltering:
             handle=1,
             process_id=11,
         )
-        desktop.get_windows = MagicMock(return_value=([active_window], {1}))
-        desktop.get_active_window = MagicMock(return_value=active_window)
+        desktop.get_windows_fast = MagicMock(return_value=([active_window], {1}))
+        desktop.get_active_window_fast = MagicMock(return_value=active_window)
         desktop.get_cursor_location = MagicMock(return_value=(250, 180))
         desktop.get_screenshot = MagicMock(return_value=Image.new("RGB", (800, 600), "white"))
 
@@ -277,10 +276,51 @@ class TestDisplayFiltering:
                 )
 
         desktop.tree.get_state.assert_not_called()
+        desktop.get_windows_fast.assert_called_once()
+        desktop.get_active_window_fast.assert_called_once_with(windows=[active_window])
+        assert state.active_window == active_window
+        assert state.windows == []
         assert state.tree_state.root_node.bounding_box == desktop.tree.screen_box
         assert state.tree_state.interactive_nodes == []
         assert state.tree_state.scrollable_nodes == []
         assert state.screenshot_original_size.to_string() == "(800,600)"
+
+    def test_get_state_keeps_open_windows_when_use_ui_tree_false(self, desktop):
+        desktop.tree = MagicMock()
+        desktop.tree.screen_box = make_box(0, 0, 1920, 1080)
+        active_window = Window(
+            name="Browser",
+            is_browser=True,
+            depth=0,
+            status=Status.NORMAL,
+            bounding_box=make_box(100, 100, 700, 500),
+            handle=1,
+            process_id=11,
+        )
+        other_window = Window(
+            name="Editor",
+            is_browser=False,
+            depth=1,
+            status=Status.NORMAL,
+            bounding_box=make_box(900, 100, 1500, 700),
+            handle=2,
+            process_id=22,
+        )
+        desktop.get_windows_fast = MagicMock(return_value=([active_window, other_window], {1, 2}))
+        desktop.get_active_window_fast = MagicMock(return_value=active_window)
+        desktop.get_cursor_location = MagicMock(return_value=(250, 180))
+
+        with patch("windows_mcp.desktop.service.get_current_desktop", return_value={"name": "Desktop 1"}):
+            with patch("windows_mcp.desktop.service.get_all_desktops", return_value=[{"name": "Desktop 1"}]):
+                state = desktop.get_state(
+                    use_vision=False,
+                    use_annotation=False,
+                    use_ui_tree=False,
+                )
+
+        assert state.active_window == active_window
+        assert state.windows == [other_window]
+        desktop.tree.get_state.assert_not_called()
 
     def test_get_state_rejects_dom_without_ui_tree(self, desktop):
         desktop.tree = MagicMock()
@@ -291,7 +331,6 @@ class TestDisplayFiltering:
     def test_get_state_logs_snapshot_profile_when_enabled(self, desktop, monkeypatch):
         desktop.tree = MagicMock()
         desktop.tree.screen_box = make_box(0, 0, 1920, 1080)
-        desktop.get_controls_handles = MagicMock(return_value={1})
         active_window = Window(
             name="Browser",
             is_browser=True,
@@ -301,8 +340,8 @@ class TestDisplayFiltering:
             handle=1,
             process_id=11,
         )
-        desktop.get_windows = MagicMock(return_value=([active_window], {1}))
-        desktop.get_active_window = MagicMock(return_value=active_window)
+        desktop.get_windows_fast = MagicMock(return_value=([active_window], {1}))
+        desktop.get_active_window_fast = MagicMock(return_value=active_window)
         desktop.get_cursor_location = MagicMock(return_value=(250, 180))
         logged: list[str] = []
 

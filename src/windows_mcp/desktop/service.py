@@ -121,9 +121,6 @@ class Desktop:
         capture_rect = self.get_display_union_rect(display_indices) if display_indices else None
         screenshot_region = self._rect_to_bounding_box(capture_rect) if capture_rect else None
 
-        # Fast path for Screenshot tool (use_ui_tree=False): skip window enumeration.
-        # UIAutomation calls (get_controls_handles / get_windows / get_active_window)
-        # can hang when an app is launching and not responding to WM messages.
         if use_ui_tree:
             controls_handles = self.get_controls_handles()  # Taskbar,Program Manager,Apps, Dialogs
             windows, windows_handles = self.get_windows(controls_handles=controls_handles)  # Apps
@@ -131,9 +128,8 @@ class Desktop:
             active_window_handle = active_window.handle if active_window else None
         else:
             controls_handles = set()
-            windows = []
-            windows_handles = set()
-            active_window = None
+            windows, windows_handles = self.get_windows_fast()
+            active_window = self.get_active_window_fast(windows=windows)
             active_window_handle = None
 
         cursor_position = self.get_cursor_location()
@@ -349,6 +345,13 @@ class Desktop:
         """Give any node of the app and it will return True if the app is a browser, False otherwise."""
         try:
             process = Process(node.ProcessId)
+            return Browser.has_process(process.name())
+        except Exception:
+            return False
+
+    def _is_browser_process_id(self, process_id: int) -> bool:
+        try:
+            process = Process(process_id)
             return Browser.has_process(process.name())
         except Exception:
             return False
@@ -928,6 +931,84 @@ class Desktop:
             logger.error(f"Error in get_windows: {ex}")
             windows = []
         return windows, window_handles
+
+    def _get_window_status_from_handle(self, handle: int) -> Status:
+        if win32gui.IsIconic(handle):
+            return Status.MINIMIZED
+        if win32gui.IsZoomed(handle):
+            return Status.MAXIMIZED
+        if win32gui.IsWindowVisible(handle):
+            return Status.NORMAL
+        return Status.HIDDEN
+
+    def _window_from_handle(self, handle: int, depth: int) -> Window | None:
+        if not win32gui.IsWindow(handle):
+            return None
+        if not is_window_on_current_desktop(handle):
+            return None
+        if not win32gui.IsWindowVisible(handle):
+            return None
+        title = win32gui.GetWindowText(handle).strip()
+        if not title:
+            return None
+
+        left, top, right, bottom = win32gui.GetWindowRect(handle)
+        _, process_id = win32process.GetWindowThreadProcessId(handle)
+        return Window(
+            **{
+                "name": title,
+                "depth": depth,
+                "status": self._get_window_status_from_handle(handle),
+                "bounding_box": BoundingBox(
+                    left=left,
+                    top=top,
+                    right=right,
+                    bottom=bottom,
+                    width=max(0, right - left),
+                    height=max(0, bottom - top),
+                ),
+                "handle": handle,
+                "process_id": process_id,
+                "is_browser": self._is_browser_process_id(process_id),
+            }
+        )
+
+    def get_windows_fast(self) -> tuple[list[Window], set[int]]:
+        handles: list[int] = []
+
+        def callback(hwnd, _):
+            try:
+                if win32gui.IsWindow(hwnd) and win32gui.IsWindowVisible(hwnd):
+                    handles.append(hwnd)
+            except Exception:
+                pass
+            return True
+
+        win32gui.EnumWindows(callback, None)
+
+        windows: list[Window] = []
+        window_handles: set[int] = set()
+        for depth, handle in enumerate(handles):
+            window = self._window_from_handle(handle, depth)
+            if window is None:
+                continue
+            windows.append(window)
+            window_handles.add(handle)
+
+        return windows, window_handles
+
+    def get_active_window_fast(self, windows: list[Window] | None = None) -> Window | None:
+        if windows is None:
+            windows, _ = self.get_windows_fast()
+        handle = win32gui.GetForegroundWindow()
+        if not handle or not win32gui.IsWindow(handle):
+            return None
+        if win32gui.GetClassName(handle) == "Progman":
+            return None
+        for window in windows:
+            if window.handle == handle:
+                return window
+        return self._window_from_handle(handle, 0)
 
     def get_xpath_from_element(self, element: uia.Control):
         current = element
