@@ -33,9 +33,9 @@ def register(mcp, *, get_desktop, get_analytics):
         app_id: Annotated[
             str,
             Field(
-                description="The valid Application User Model ID of the toast notification. Required to display the notification in a specific app.",
+                description="The Application User Model ID (AUMID) used as the notification sender identity. Defaults to 'Windows-MCP'. Override with a registered app AUMID to show the notification under a specific installed app.",
             ),
-        ],
+        ] = "Windows-MCP",
         ctx: Context = None,
     ) -> str:
         try:
