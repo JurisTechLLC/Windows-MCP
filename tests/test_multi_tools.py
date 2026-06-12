@@ -1,6 +1,8 @@
 import asyncio
 from unittest.mock import MagicMock
 
+import pytest
+
 from windows_mcp.desktop.service import Desktop
 from windows_mcp.desktop.views import DesktopState
 from windows_mcp.tree.views import BoundingBox, Center, ScrollElementNode, TreeElementNode, TreeState
@@ -79,6 +81,7 @@ def test_multiselect_uses_bulk_coordinate_resolution():
 
     assert result == "Multi-selected elements at:\n(10,10)\n(40,40)"
     desktop.get_coordinates_from_labels.assert_called_once_with([0, 1])
+    desktop.validate_selectable_coordinates.assert_called_once_with([(10, 10), (40, 40)])
     desktop.multi_select.assert_called_once_with(False, [[10, 10], [40, 40]])
 
 
@@ -92,4 +95,31 @@ def test_multiedit_uses_bulk_coordinate_resolution():
 
     assert result == "Multi-edited elements at: (10,10) with text 'First', (40,40) with text 'Second'"
     desktop.get_coordinates_from_labels.assert_called_once_with([0, 1])
+    desktop.validate_selectable_coordinates.assert_called_once_with([(10, 10), (40, 40)])
     desktop.multi_edit.assert_called_once_with([[10, 10, "First"], [40, 40, "Second"]])
+
+
+def test_multiselect_raises_on_missing_selectable_element():
+    desktop = MagicMock()
+    desktop.validate_selectable_coordinates.side_effect = ValueError(
+        "error: no selectable element at (400, 400)"
+    )
+
+    tools = register_tools(desktop)
+    with pytest.raises(ValueError, match=r"error: no selectable element at \(400, 400\)"):
+        asyncio.run(tools["MultiSelect"](locs=[[400, 400]], press_ctrl=False))
+
+    desktop.multi_select.assert_not_called()
+
+
+def test_multiedit_raises_on_missing_selectable_element():
+    desktop = MagicMock()
+    desktop.validate_selectable_coordinates.side_effect = ValueError(
+        "error: no selectable element at (500, 500)"
+    )
+
+    tools = register_tools(desktop)
+    with pytest.raises(ValueError, match=r"error: no selectable element at \(500, 500\)"):
+        asyncio.run(tools["MultiEdit"](locs=[[500, 500, "hello"]]))
+
+    desktop.multi_edit.assert_not_called()
