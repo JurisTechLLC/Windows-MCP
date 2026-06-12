@@ -254,6 +254,11 @@ def _run_server(
             if ssl_certfile and ssl_keyfile:
                 uvicorn_config["ssl_certfile"] = ssl_certfile
                 uvicorn_config["ssl_keyfile"] = ssl_keyfile
+            run_kwargs: dict[str, Any] = {}
+            if transport == Transport.STREAMABLE_HTTP.value:
+                # Stateless mode avoids sticky-session requirements on proxies/tunnels and
+                # allows safe retries for transient network failures.
+                run_kwargs["stateless_http"] = True
             mcp.run(
                 transport=transport,
                 host=host,
@@ -267,6 +272,7 @@ def _run_server(
                     allowed_hosts=allowed_hosts,
                 ),
                 uvicorn_config=uvicorn_config or None,
+                **run_kwargs,
             )
         case _:
             raise ValueError(f"Invalid transport: {transport}")

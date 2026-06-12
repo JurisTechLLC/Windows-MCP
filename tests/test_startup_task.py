@@ -85,3 +85,33 @@ def test_uninstall_removes_task_and_wrapper(monkeypatch, tmp_path):
     assert not start_script.exists()
     assert ("/End", "/TN", cli._TASK_NAME) in calls
     assert ("/Delete", "/TN", cli._TASK_NAME, "/F") in calls
+
+
+def test_run_server_streamable_http_enables_stateless_mode(monkeypatch):
+    fake_mcp = Mock()
+    monkeypatch.setattr(cli, "_build_mcp", lambda: fake_mcp)
+    monkeypatch.setattr(cli, "_http_middleware", lambda **_: [])
+
+    cli._run_server(
+        transport=cli.Transport.STREAMABLE_HTTP.value,
+        host="127.0.0.1",
+        port=8000,
+    )
+
+    assert fake_mcp.run.call_count == 1
+    assert fake_mcp.run.call_args.kwargs["stateless_http"] is True
+
+
+def test_run_server_sse_does_not_set_stateless_mode(monkeypatch):
+    fake_mcp = Mock()
+    monkeypatch.setattr(cli, "_build_mcp", lambda: fake_mcp)
+    monkeypatch.setattr(cli, "_http_middleware", lambda **_: [])
+
+    cli._run_server(
+        transport=cli.Transport.SSE.value,
+        host="127.0.0.1",
+        port=8000,
+    )
+
+    assert fake_mcp.run.call_count == 1
+    assert "stateless_http" not in fake_mcp.run.call_args.kwargs
