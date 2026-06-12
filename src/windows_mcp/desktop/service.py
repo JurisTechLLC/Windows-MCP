@@ -1426,10 +1426,16 @@ class Desktop:
         self,
         name: str | None = None,
         sort_by: Literal["memory", "cpu", "name"] = "memory",
-        limit: int = 20,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> str:
         import psutil
         from tabulate import tabulate
+
+        if offset < 0:
+            return "Error: offset must be greater than or equal to 0."
+        if limit is not None and limit <= 0:
+            return "Error: limit must be greater than 0."
 
         procs = []
         for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info"]):
@@ -1456,15 +1462,24 @@ class Desktop:
             "name": lambda x: x["name"].lower(),
         }
         procs.sort(key=sort_key.get(sort_by, sort_key["memory"]), reverse=(sort_by != "name"))
-        procs = procs[:limit]
         if not procs:
             return f"No processes found{f' matching {name}' if name else ''}."
+        total_count = len(procs)
+        procs = procs[offset:]
+        if limit is not None:
+            procs = procs[:limit]
+        if not procs:
+            return "No processes found for the provided offset."
+        truncated = offset > 0 or (limit is not None and (offset + len(procs)) < total_count)
         table = tabulate(
             [[p["pid"], p["name"], f"{p['cpu']:.1f}%", f"{p['mem_mb']:.1f} MB"] for p in procs],
             headers=["PID", "Name", "CPU%", "Memory"],
             tablefmt="simple",
         )
-        return f"Processes ({len(procs)} shown):\n{table}"
+        header = f"Processes ({len(procs)} shown of {total_count})"
+        if truncated:
+            header += " | truncated: true"
+        return f"{header}:\n{table}"
 
     def kill_process(
         self, name: str | None = None, pid: int | None = None, force: bool = False
