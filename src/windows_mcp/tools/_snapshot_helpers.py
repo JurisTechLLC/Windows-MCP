@@ -194,7 +194,9 @@ def build_snapshot_response(
     UI Tree:
     {semantic_tree or "No elements found."}''')
 
-    response = [response_text]
     if screenshot_bytes:
-        response.append(Image(data=screenshot_bytes, format='png'))
+        response_text += "\n[Screenshot attached above]"
+        response = [response_text, Image(data=screenshot_bytes, format="png")]
+    else:
+        response = [response_text]
     return response
