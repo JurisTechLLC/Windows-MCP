@@ -146,12 +146,12 @@ These tools only read information without making changes:
 ### 4. **Network Security**
 
 - The default `stdio` transport has no network exposure — prefer it for local use
-- HTTP transports (`sse`, `streamable-http`) enforce authentication for any non-loopback bind address; starting without `--auth-key`, `--oauth-client-id/secret`, or `--allow-insecure-remote` on a non-loopback host is refused at startup
+- HTTP transports (`sse`, `streamable-http`) enforce authentication for any non-loopback bind address; starting without `WINDOWS_MCP_TOKEN` / `--token`, `--oauth-client-id/secret`, or `--allow-insecure-remote` on a non-loopback host is refused at startup
 - **CORS is disabled by default** — no `Access-Control-Allow-Origin` headers are emitted, so browsers block cross-origin requests via their own Same-Origin Policy; use `--cors-origins` only if you need a browser-based MCP client and restrict it to the specific origin(s) required
 - **DNS rebinding protection** is applied automatically — the server validates the `Host` header against the configured bind address so a DNS rebinding attack cannot be used to reach a localhost-bound server from an external site
 - Use localhost / loopback binding (`127.0.0.1`) instead of `0.0.0.0` when network-wide access is not required
 - Implement firewall rules to restrict access to the MCP server ports
-- Never expose the MCP server to the internet without `--auth-key` or OAuth and TLS (`--ssl-certfile`/`--ssl-keyfile`)
+- Never expose the MCP server to the internet without `WINDOWS_MCP_TOKEN` / `--token` (or OAuth) and TLS (`--ssl-certfile`/`--ssl-keyfile`)
 
 ### 5. **Data Protection**
 

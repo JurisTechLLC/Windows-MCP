@@ -450,14 +450,18 @@ Optional environment variables can be set to customize behavior — see [Environ
 
 ### Security for Remote Access
 
+**Warning:** Anyone exposing this server via a public tunnel (Tailscale Funnel, ngrok, etc.) must set a bearer token first. The HTTP transports will refuse to bind to a non-loopback address without a configured token (or OAuth credentials), so an unauthenticated server cannot be accidentally exposed to the public internet.
+
 For network access, enable authentication and TLS:
 
 ```shell
 windows-mcp --transport sse --host 0.0.0.0 \
-  --auth-key "your_secret_token" \
+  --token "your_secret_token" \
   --ip-allowlist "203.0.113.0/24" \
   --ssl-certfile cert.pem --ssl-keyfile key.pem
 ```
+
+`--auth-key` is a deprecated alias for `--token`, and `WINDOWS_MCP_AUTH_KEY` is a deprecated alias for `WINDOWS_MCP_TOKEN`.
 
 See [🔐 Security & Access Control](#-security--access-control) for all options.
 
@@ -475,13 +479,15 @@ See [🔐 Security & Access Control](#-security--access-control) for all options
 
 ### Authentication
 ```shell
-windows-mcp --transport sse --host 0.0.0.0 --auth-key "your_token"
+windows-mcp --transport sse --host 0.0.0.0 --token "your_token"
 ```
 Requires `Authorization: Bearer your_token` header on all requests.
 
+The token is read from the `WINDOWS_MCP_TOKEN` environment variable, the `--token` CLI flag, or the `auth_key` value in `~/.windows-mcp/config.toml` (in that precedence order). `--auth-key` / `WINDOWS_MCP_AUTH_KEY` are still accepted as aliases.
+
 ### IP Allowlist
 ```shell
-windows-mcp --auth-key "token" --ip-allowlist "203.0.113.0/24,198.51.100.5"
+windows-mcp --token "token" --ip-allowlist "203.0.113.0/24,198.51.100.5"
 ```
 Restricts connections to specified CIDR ranges. Blocks private/loopback IPs by default.
 
@@ -635,7 +641,7 @@ All variables are optional unless noted. Set them via the `env` key in `claude_d
 
 | Variable | Default | Description |
 |---|---|---|
-| `WINDOWS_MCP_AUTH_KEY` | _(none)_ | Bearer token required on all HTTP requests. Alternative to `--auth-key` CLI flag. |
+| `WINDOWS_MCP_TOKEN` | _(none)_ | Bearer token required on all HTTP requests when set. Alternative to `--token` CLI flag. `WINDOWS_MCP_AUTH_KEY` / `--auth-key` are still accepted as aliases. |
 | `WINDOWS_MCP_IP_ALLOWLIST` | _(none)_ | Comma-separated list of allowed client IPs or CIDR ranges (e.g., `203.0.113.0/24,198.51.100.5`). Alternative to `--ip-allowlist` CLI flag. |
 | `WINDOWS_MCP_CORS_ORIGINS` | _(none)_ | Comma-separated list of origins permitted to make cross-origin browser requests (e.g., `https://my-client.example.com`). No CORS headers are emitted when unset. Alternative to `--cors-origins` CLI flag. |
 | `WINDOWS_MCP_TOOLS` | _(all enabled)_ | Comma-separated explicit list of tools to enable (e.g., `Screenshot,Click,Snapshot`). Alternative to `--tools` CLI flag. |
@@ -678,7 +684,7 @@ Remote (with auth + IP allowlist + TLS):
       "command": "uvx",
       "args": ["windows-mcp", "--transport", "sse", "--host", "0.0.0.0"],
       "env": {
-        "WINDOWS_MCP_AUTH_KEY": "your_token",
+        "WINDOWS_MCP_TOKEN": "your_token",
         "WINDOWS_MCP_IP_ALLOWLIST": "203.0.113.0/24",
         "WINDOWS_MCP_SSL_CERTFILE": "/path/to/cert.pem",
         "WINDOWS_MCP_SSL_KEYFILE": "/path/to/key.pem"
